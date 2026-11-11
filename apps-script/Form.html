@@ -160,11 +160,13 @@
   <footer>Beeline · Yobee × Colours of Asia · Intelligence4Start internal</footer>
 
 <script>
+  console.log('load page');
   // Apps Script web app that saves submissions to the Sheet
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbz3AkU5qngPVWBzSNePVscRQbgbDd73k4Bftxgr7KrUCq5OEqoMSqEX9TOxPpGSjmGJ/exec';
   const STORE_KEY = 'beeline-submitted-by';
 
   const f = document.getElementById('f');
+  console.log('---- f:', f);
   const btn = document.getElementById('btn');
   const banner = document.getElementById('banner');
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

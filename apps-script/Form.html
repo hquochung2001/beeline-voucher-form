@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<base target="_top">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beeline vendor vouchers · Yobee</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -26,7 +27,11 @@
   .section{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--forest);margin:0 0 14px}
   .section:not(:first-child){margin-top:28px;padding-top:24px;border-top:1px dashed var(--line)}
   .row{display:grid;grid-template-columns:1fr 160px;gap:16px}
-  @media (max-width:520px){.row{grid-template-columns:1fr}.card{padding:22px 18px}}
+  .row.even{grid-template-columns:1fr 1fr}
+  .remember{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:-6px 0 4px}
+  .remember input{width:16px;height:16px;accent-color:var(--forest)}
+  input[type=password]{width:100%;font:inherit;color:var(--ink);background:#FBFAF4;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px}
+  @media (max-width:520px){.row,.row.even{grid-template-columns:1fr}.card{padding:22px 18px}}
   .field{margin-bottom:18px}
   .lbl{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
   .hint{font-size:13px;color:var(--muted);margin:-2px 0 8px}
@@ -75,6 +80,21 @@
       <div class="banner" id="banner" role="alert"></div>
 
       <form id="f" novalidate>
+        <p class="section">Team access</p>
+        <div class="row even">
+          <div class="field" data-f="submittedBy">
+            <label class="lbl" for="submittedBy">Your name</label>
+            <input id="submittedBy" name="submittedBy" type="text" autocomplete="name" maxlength="80">
+            <div class="msg">Enter your name.</div>
+          </div>
+          <div class="field" data-f="passcode">
+            <label class="lbl" for="passcode">Team passcode</label>
+            <input id="passcode" name="passcode" type="password" autocomplete="current-password" maxlength="100">
+            <div class="msg">Enter the team passcode.</div>
+          </div>
+        </div>
+        <label class="remember"><input type="checkbox" id="remember" checked> Remember my name and passcode on this device</label>
+
         <p class="section">Vendor</p>
         <div class="row">
           <div class="field" data-f="business">
@@ -135,7 +155,7 @@
 
         <div class="actions">
           <button type="submit" id="btn">Submit voucher</button>
-          <span class="small">Signed in as <?= user ?></span>
+          <span class="small">Saved straight to the Beeline vouchers Sheet.</span>
         </div>
       </form>
 
@@ -152,59 +172,88 @@
   <footer>Beeline · Yobee × Colours of Asia · Intelligence4Start internal</footer>
 
 <script>
+  // Apps Script web app that saves submissions to the Sheet
+  const ENDPOINT = 'https://script.google.com/macros/s/AKfycbzhn2RETmy7ak0MeEJK7hHEgO0lPlM9u0j67MdQvKNzk-uGHv7B2Zswvs3suVD_iT8/exec';
+  const STORE_KEY = 'beeline-team-access';
+
   const f = document.getElementById('f');
   const btn = document.getElementById('btn');
   const banner = document.getElementById('banner');
+  const remember = document.getElementById('remember');
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+  // Restore name + passcode if remembered on this device
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    if (saved) { f.submittedBy.value = saved.submittedBy || ''; f.passcode.value = saved.passcode || ''; }
+  } catch (e) {}
+
+  function saveAccess(){
+    try {
+      if (remember.checked) localStorage.setItem(STORE_KEY, JSON.stringify({ submittedBy: f.submittedBy.value.trim(), passcode: f.passcode.value }));
+      else localStorage.removeItem(STORE_KEY);
+    } catch (e) {}
+  }
+
   function data(){
-    const fd = new FormData(f);
+    const fd = new FormData(f), g = k => (fd.get(k) || '').toString().trim();
     return {
-      business:(fd.get('business')||'').trim(), stall:(fd.get('stall')||'').trim(),
-      voucherName:(fd.get('voucherName')||'').trim(), type:fd.get('type')||'',
-      details:(fd.get('details')||'').trim(), quantity:(fd.get('quantity')||'').trim(),
-      email:(fd.get('email')||'').trim()
+      submittedBy:g('submittedBy'), passcode:(fd.get('passcode')||'').toString(),
+      business:g('business'), stall:g('stall'), voucherName:g('voucherName'), type:g('type'),
+      details:g('details'), quantity:g('quantity'), email:g('email')
     };
   }
   function validate(d){
     const bad = {
+      submittedBy:!d.submittedBy, passcode:!d.passcode,
       business:!d.business, stall:!d.stall, voucherName:!d.voucherName, type:!d.type,
       details:!d.details, quantity:!/^\d+$/.test(d.quantity) || +d.quantity < 1,
       email:!emailRe.test(d.email)
     };
     let first = null;
     document.querySelectorAll('.field').forEach(el=>{
-      const k = el.dataset.f, b = bad[k];
+      const b = bad[el.dataset.f];
       el.classList.toggle('invalid', !!b);
       if (b && !first) first = el;
     });
     if (first){ first.scrollIntoView({behavior:'smooth',block:'center'}); const i = first.querySelector('input,textarea'); i && i.focus({preventScroll:true}); }
     return !first;
   }
+  function showError(msg){
+    banner.textContent = msg; banner.style.display = 'block';
+    banner.scrollIntoView({behavior:'smooth',block:'center'});
+    btn.disabled = false; btn.textContent = 'Submit voucher';
+  }
+
   f.addEventListener('input', e=>{ const fl = e.target.closest('.field'); fl && fl.classList.remove('invalid'); });
-  f.addEventListener('submit', e=>{
+  f.addEventListener('submit', async e=>{
     e.preventDefault();
-    banner.style.display='none';
+    banner.style.display = 'none';
     const d = data();
     if (!validate(d)) return;
     btn.disabled = true; btn.textContent = 'Saving…';
-    google.script.run
-      .withSuccessHandler(r=>{
-        document.getElementById('sentTo').textContent = d.voucherName + ' (' + d.business + ')';
-        document.getElementById('ref').textContent = 'Reference ' + r.id;
-        f.style.display='none'; document.getElementById('done').style.display='block';
-        window.scrollTo({top:0,behavior:'smooth'});
-      })
-      .withFailureHandler(err=>{
-        banner.textContent = (err && err.message) || 'Something went wrong. Please try again.';
-        banner.style.display='block';
-        btn.disabled = false; btn.textContent = 'Submit voucher';
-      })
-      .submitPromotion(d);
+    try {
+      // Sent as text/plain so the browser makes a simple request (no CORS preflight)
+      const res = await fetch(ENDPOINT, { method: 'POST', body: JSON.stringify(d) });
+      const r = await res.json();
+      if (!r.ok) return showError(r.error || 'The voucher could not be saved. Please try again.');
+      saveAccess();
+      document.getElementById('sentTo').textContent = d.voucherName + ' (' + d.business + ')';
+      document.getElementById('ref').textContent = 'Reference ' + r.id;
+      f.style.display = 'none'; document.getElementById('done').style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Submit voucher';
+      window.scrollTo({top:0,behavior:'smooth'});
+    } catch (err) {
+      showError('Could not reach the Beeline Sheet. Check your connection and try again. If this keeps happening, the Apps Script deployment may need its access set to "Anyone".');
+    }
   });
+
   document.getElementById('again').addEventListener('click', e=>{
-    e.preventDefault(); f.reset(); btn.disabled=false; btn.textContent='Submit voucher';
-    document.getElementById('done').style.display='none'; f.style.display='block';
+    e.preventDefault();
+    const keep = { submittedBy: f.submittedBy.value, passcode: f.passcode.value };
+    f.reset(); f.submittedBy.value = keep.submittedBy; f.passcode.value = keep.passcode;
+    document.getElementById('done').style.display = 'none'; f.style.display = 'block';
+    f.business.focus();
   });
 </script>
 </body>

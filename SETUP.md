@@ -1,28 +1,32 @@
-# Beeline vendor voucher form — setup (≈10 min)
+# Beeline vendor voucher form — setup
 
 An internal I4S form. Team members log each vendor's voucher, and every submission is saved as a row in a Google Sheet. Nothing is emailed to vendors.
 
-Do all of this signed in with your **@i4s.au** Google account.
+**How it fits together**
+- `apps-script/Code.gs` runs in Google Apps Script, bound to the Sheet. It receives submissions and writes rows.
+- `apps-script/Form.html` is a standalone web page. Host it anywhere (a website, GitHub Pages, a shared drive link opened in a browser). It sends submissions to the Apps Script `/exec` URL set in `ENDPOINT` near the bottom of the file.
+- Access is protected by a **team passcode**, stored in Apps Script (never in the code).
 
-## 1. Create the Sheet + script
-1. Create a Google Sheet, e.g. **"Beeline – Vendor Vouchers"**. Share it with the team if they need to see results.
-2. **Extensions → Apps Script**.
-3. Replace `Code.gs` with `apps-script/Code.gs`.
-4. **+ → HTML** → name it `Form` → paste `apps-script/Form.html`.
-5. Save. Pick `setup` in the function dropdown → **Run** → approve permissions (if you see "Google hasn't verified this app": **Advanced → Go to (project)**). This creates the header row.
+## 1. Sheet + script
+1. Create a Google Sheet, e.g. **"Beeline – Vendor Vouchers"**.
+2. **Extensions → Apps Script** → replace `Code.gs` with `apps-script/Code.gs`. Delete any old `Form` or `Confirm` HTML files in the Apps Script project; they're no longer used there.
+3. **Project Settings (⚙️) → Script properties → Add script property**: name `TEAM_PASSCODE`, value = a passcode you share with the team.
+4. Back in the editor, pick `setup` → **Run** → approve permissions. This creates the header row.
 
-## 2. Deploy
-1. **Deploy → New deployment → ⚙️ → Web app**.
-2. Execute as **Me** · Who has access **Anyone within Intelligence4Start (i4s.au)** → **Deploy**.
-3. Copy the URL (ends in `/exec`) and share it with the team.
+## 2. Deploy (or update) the web app
+- **First time:** **Deploy → New deployment → Web app** · Execute as **Me** · Who has access **Anyone** → **Deploy**. Copy the `/exec` URL into `ENDPOINT` in `Form.html`.
+- **Updating an existing deployment (keeps the same URL):** **Deploy → Manage deployments → ✏️ → Version: New version → Deploy**.
 
-If "Anyone within Intelligence4Start" isn't offered, the Sheet was created on a personal Gmail account. Recreate it on your i4s.au account.
+Access must be **Anyone**. A form hosted outside Google can't send a Google sign-in, so "Anyone within i4s.au" would block every submission. The passcode protects it instead.
 
-## 3. Test
-Open the link, submit a test voucher, and check that a new row appears in the **Submissions** tab with your email under *Submitted by*.
+## 3. Host the form
+Put `Form.html` on any web host. It's a single file with the logo embedded. Share the page link and the passcode with the team.
+
+## 4. Test
+Open the `/exec` link in a browser: it should show `{"ok":true,...,"status":"running"}`. Then open the form, enter your name + passcode, submit a test voucher, and check the **Submissions** tab.
 
 ## Notes
 - **Sheet columns:** Submission ID, Submitted at, Submitted by, Business name, Stall number, Voucher name, Type, Voucher details, Number of vouchers, Contact email.
-- Only signed-in @i4s.au accounts can open or submit the form. To allow another domain, add it to `TEAM_DOMAINS` in `Code.gs`.
-- After any code change: **Deploy → Manage deployments → ✏️ → Version: New version → Deploy**. The link stays the same.
+- **Change the passcode** any time in Script properties. It takes effect immediately; team members then re-enter it.
+- The form can remember name + passcode on each device (checkbox). Untick it on shared computers.
 - To fix a mistake, edit the row in the Sheet directly.

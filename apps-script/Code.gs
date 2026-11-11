@@ -6,7 +6,6 @@
  * (hosted anywhere) and saves each one as a row in the "Submissions" tab.
  *
  * Deploy as a web app: Execute as Me · Who has access: Anyone (see SETUP.md).
- * Access is protected by a team passcode stored in Script Properties as TEAM_PASSCODE.
  */
 
 // ---------- Settings ----------
@@ -34,7 +33,6 @@ function doGet() {
 function doPost(e) {
   try {
     const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-    checkPasscode_(body.passcode);
     const d = clean_(body);
     const lock = LockService.getScriptLock();
     lock.waitLock(20000);
@@ -61,23 +59,11 @@ function setup() {
     .setFontWeight('bold').setBackground('#0B2A20').setFontColor('#F6F5EB');
   sh.setFrozenRows(1);
   sh.setColumnWidth(8, 320);
-  if (!PropertiesService.getScriptProperties().getProperty('TEAM_PASSCODE')) {
-    Logger.log('Reminder: add a Script Property named TEAM_PASSCODE (Project Settings → Script properties).');
-  }
 }
 
 // ---------- Helpers ----------
 function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-}
-
-function checkPasscode_(given) {
-  const expected = PropertiesService.getScriptProperties().getProperty('TEAM_PASSCODE');
-  if (!expected) throw new Error('The form is not set up yet: TEAM_PASSCODE is missing in Script Properties.');
-  if (String(given || '') !== expected) {
-    Utilities.sleep(800); // slow down guessing
-    throw new Error('Wrong team passcode. Check it with the Beeline lead.');
-  }
 }
 
 function sheet_() {

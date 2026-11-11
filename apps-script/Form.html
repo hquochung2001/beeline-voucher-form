@@ -27,11 +27,7 @@
   .section{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--forest);margin:0 0 14px}
   .section:not(:first-child){margin-top:28px;padding-top:24px;border-top:1px dashed var(--line)}
   .row{display:grid;grid-template-columns:1fr 160px;gap:16px}
-  .row.even{grid-template-columns:1fr 1fr}
-  .remember{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:-6px 0 4px}
-  .remember input{width:16px;height:16px;accent-color:var(--forest)}
-  input[type=password]{width:100%;font:inherit;color:var(--ink);background:#FBFAF4;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px}
-  @media (max-width:520px){.row,.row.even{grid-template-columns:1fr}.card{padding:22px 18px}}
+  @media (max-width:520px){.row{grid-template-columns:1fr}.card{padding:22px 18px}}
   .field{margin-bottom:18px}
   .lbl{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
   .hint{font-size:13px;color:var(--muted);margin:-2px 0 8px}
@@ -80,20 +76,12 @@
       <div class="banner" id="banner" role="alert"></div>
 
       <form id="f" novalidate>
-        <p class="section">Team access</p>
-        <div class="row even">
-          <div class="field" data-f="submittedBy">
-            <label class="lbl" for="submittedBy">Your name</label>
-            <input id="submittedBy" name="submittedBy" type="text" autocomplete="name" maxlength="80">
-            <div class="msg">Enter your name.</div>
-          </div>
-          <div class="field" data-f="passcode">
-            <label class="lbl" for="passcode">Team passcode</label>
-            <input id="passcode" name="passcode" type="password" autocomplete="current-password" maxlength="100">
-            <div class="msg">Enter the team passcode.</div>
-          </div>
+        <p class="section">Submitted by</p>
+        <div class="field" data-f="submittedBy" style="max-width:320px">
+          <label class="lbl" for="submittedBy">Your name</label>
+          <input id="submittedBy" name="submittedBy" type="text" autocomplete="name" maxlength="80">
+          <div class="msg">Enter your name.</div>
         </div>
-        <label class="remember"><input type="checkbox" id="remember" checked> Remember my name and passcode on this device</label>
 
         <p class="section">Vendor</p>
         <div class="row">
@@ -174,38 +162,28 @@
 <script>
   // Apps Script web app that saves submissions to the Sheet
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbxYcMkv5bluO1bd5orMH9v8mPFndpk4TdiiJn8LmCB1cJo9pBdRfu15B2oFUyTpvf1j/exec';
-  const STORE_KEY = 'beeline-team-access';
+  const STORE_KEY = 'beeline-submitted-by';
 
   const f = document.getElementById('f');
   const btn = document.getElementById('btn');
   const banner = document.getElementById('banner');
-  const remember = document.getElementById('remember');
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  // Restore name + passcode if remembered on this device
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-    if (saved) { f.submittedBy.value = saved.submittedBy || ''; f.passcode.value = saved.passcode || ''; }
-  } catch (e) {}
-
-  function saveAccess(){
-    try {
-      if (remember.checked) localStorage.setItem(STORE_KEY, JSON.stringify({ submittedBy: f.submittedBy.value.trim(), passcode: f.passcode.value }));
-      else localStorage.removeItem(STORE_KEY);
-    } catch (e) {}
-  }
+  // Remember the team member's name on this device
+  try { f.submittedBy.value = localStorage.getItem(STORE_KEY) || ''; } catch (e) {}
+  function saveName(){ try { localStorage.setItem(STORE_KEY, f.submittedBy.value.trim()); } catch (e) {} }
 
   function data(){
     const fd = new FormData(f), g = k => (fd.get(k) || '').toString().trim();
     return {
-      submittedBy:g('submittedBy'), passcode:(fd.get('passcode')||'').toString(),
+      submittedBy:g('submittedBy'),
       business:g('business'), stall:g('stall'), voucherName:g('voucherName'), type:g('type'),
       details:g('details'), quantity:g('quantity'), email:g('email')
     };
   }
   function validate(d){
     const bad = {
-      submittedBy:!d.submittedBy, passcode:!d.passcode,
+      submittedBy:!d.submittedBy,
       business:!d.business, stall:!d.stall, voucherName:!d.voucherName, type:!d.type,
       details:!d.details, quantity:!/^\d+$/.test(d.quantity) || +d.quantity < 1,
       email:!emailRe.test(d.email)
@@ -237,7 +215,7 @@
       const res = await fetch(ENDPOINT, { method: 'POST', body: JSON.stringify(d) });
       const r = await res.json();
       if (!r.ok) return showError(r.error || 'The voucher could not be saved. Please try again.');
-      saveAccess();
+      saveName();
       document.getElementById('sentTo').textContent = d.voucherName + ' (' + d.business + ')';
       document.getElementById('ref').textContent = 'Reference ' + r.id;
       f.style.display = 'none'; document.getElementById('done').style.display = 'block';
@@ -250,8 +228,8 @@
 
   document.getElementById('again').addEventListener('click', e=>{
     e.preventDefault();
-    const keep = { submittedBy: f.submittedBy.value, passcode: f.passcode.value };
-    f.reset(); f.submittedBy.value = keep.submittedBy; f.passcode.value = keep.passcode;
+    const name = f.submittedBy.value;
+    f.reset(); f.submittedBy.value = name;
     document.getElementById('done').style.display = 'none'; f.style.display = 'block';
     f.business.focus();
   });

@@ -209,10 +209,13 @@
     banner.style.display = 'none';
     const d = data();
     if (!validate(d)) return;
+    console.log('-debug1');
     btn.disabled = true; btn.textContent = 'Saving…';
     try {
+      console.log('-debug2');
       // Sent as text/plain so the browser makes a simple request (no CORS preflight)
       const res = await fetch(ENDPOINT, { method: 'POST', body: JSON.stringify(d) });
+      console.log('-debug3', res);
       const r = await res.json();
       if (!r.ok) return showError(r.error || 'The voucher could not be saved. Please try again.');
       saveName();

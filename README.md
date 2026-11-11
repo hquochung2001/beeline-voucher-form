@@ -4,7 +4,7 @@ Internal I4S form for logging vendor promotions for the **Beeline** campaign on 
 The team submits each vendor's voucher; the vendor receives an email with a **Confirm** button; everything is tracked in a Google Sheet.
 
 - `apps-script/` — the real form (Google Apps Script, bound to a Google Sheet). Setup: see [SETUP.md](SETUP.md).
-- `demo/` — a self-contained clickable test version (no emails sent, nothing saved). Can be hosted with GitHub Pages.
+- `docs/` — a self-contained clickable test version (no emails sent, nothing saved). Hosted with GitHub Pages (Settings → Pages → `main` / `/docs`).
 
 ## Sync with Apps Script (optional)
 ```bash
